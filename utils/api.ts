@@ -24,6 +24,9 @@ const TOKEN_COOKIE = "token";
 
 // ================= Helpers =================
 
+// URL-encodes one path segment (ids from forms / action arguments are untrusted).
+const seg = (value: unknown) => encodeURIComponent(String(value ?? ""));
+
 type ApiOptions = Omit<RequestInit, "body"> & {
   body?: BodyInit | object;
   // auth: true => لازم يكون المستخدم مسجل دخول، وإلا يتحول إلى /sign-in
@@ -88,7 +91,11 @@ export const registerAction = async (prevState: any, formData: FormData) => {
   try {
     const { token } = await apiFetch<{ user: User; token: string }>("/users/register", {
       method: "POST",
-      body: Object.fromEntries(formData),
+      body: {
+        name: formData.get("name"),
+        email: formData.get("email"),
+        password: formData.get("password"),
+      },
     });
     await saveToken(token);
   } catch (error) {
@@ -101,7 +108,10 @@ export const loginAction = async (prevState: any, formData: FormData) => {
   try {
     const { token } = await apiFetch<{ user: User; token: string }>("/users/login", {
       method: "POST",
-      body: Object.fromEntries(formData),
+      body: {
+        email: formData.get("email"),
+        password: formData.get("password"),
+      },
     });
     await saveToken(token);
   } catch (error) {
@@ -156,7 +166,7 @@ export const fetchAllProducts = async ({ search = "", categoryId, }: { search?: 
 
 // المنتج يرجع مع الـ category
 export const fetchSingleProduct = async (productId: string) =>
-  apiFetch<Product>(`/products/${productId}`);
+  apiFetch<Product>(`/products/${seg(productId)}`);
 
 export const fetchAdminProducts = async () =>
   apiFetch<Product[]>("/products/mine", { auth: true });
@@ -180,7 +190,7 @@ export const createProductAction = async (prevState: any, formData: FormData,): 
 export const updateProductAction = async (prevState: any, formData: FormData) => {
   try {
     const productId = formData.get("id") as string;
-    await apiFetch<Product>(`/products/${productId}`, {
+    await apiFetch<Product>(`/products/${seg(productId)}`, {
       method: "PATCH",
       body: {
         name: formData.get("name"),
@@ -203,7 +213,7 @@ export const updateProductImageAction = async (prevState: any, formData: FormDat
     const productId = formData.get("id") as string;
     const image = new FormData();
     image.set("image", formData.get("image") as File);
-    await apiFetch<Product>(`/products/${productId}/image`, {
+    await apiFetch<Product>(`/products/${seg(productId)}/image`, {
       method: "PATCH",
       body: image,
       auth: true,
@@ -217,7 +227,7 @@ export const updateProductImageAction = async (prevState: any, formData: FormDat
 
 export const deleteProductAction = async (prevState: { productId: string }) => {
   try {
-    await apiFetch<null>(`/products/${prevState.productId}`, {
+    await apiFetch<null>(`/products/${seg(prevState.productId)}`, {
       method: "DELETE",
       auth: true,
     });
@@ -239,7 +249,7 @@ export const fetchAdminCategories = async () =>
   apiFetch<Category[]>("/categories/admin", { auth: true });
 
 export const fetchSingleCategory = async (categoryId: string) =>
-  apiFetch<Category>(`/categories/${categoryId}`);
+  apiFetch<Category>(`/categories/${seg(categoryId)}`);
 
 export const createCategoryAction = async (prevState: any, formData: FormData,): Promise<{ message: string }> => {
   try {
@@ -260,7 +270,7 @@ export const updateCategoryAction = async (prevState: any, formData: FormData) =
   try {
     const categoryId = formData.get("id") as string;
     const description = formData.get("description");
-    await apiFetch<Category>(`/categories/${categoryId}`, {
+    await apiFetch<Category>(`/categories/${seg(categoryId)}`, {
       method: "PATCH",
       body: {
         title: formData.get("title"),
@@ -281,7 +291,7 @@ export const updateCategoryImageAction = async (prevState: any, formData: FormDa
     const categoryId = formData.get("id") as string;
     const image = new FormData();
     image.set("image", formData.get("image") as File);
-    await apiFetch<Category>(`/categories/${categoryId}/image`, {
+    await apiFetch<Category>(`/categories/${seg(categoryId)}/image`, {
       method: "PATCH",
       body: image,
       auth: true,
@@ -295,7 +305,7 @@ export const updateCategoryImageAction = async (prevState: any, formData: FormDa
 
 export const deleteCategoryAction = async (prevState: { categoryId: string }) => {
   try {
-    await apiFetch<null>(`/categories/${prevState.categoryId}`, {
+    await apiFetch<null>(`/categories/${seg(prevState.categoryId)}`, {
       method: "DELETE",
       auth: true,
     });
@@ -342,7 +352,7 @@ export const updateCartItemAction = async ({ amount, cartItemId, }: {
   cartItemId: string;
 }) => {
   try {
-    await apiFetch<Cart>(`/cart/items/${cartItemId}`, {
+    await apiFetch<Cart>(`/cart/items/${seg(cartItemId)}`, {
       method: "PATCH",
       body: { amount },
       auth: true,
@@ -357,7 +367,7 @@ export const updateCartItemAction = async ({ amount, cartItemId, }: {
 export const removeCartItemAction = async (prevState: any, formData: FormData) => {
   try {
     const cartItemId = formData.get("id") as string;
-    await apiFetch<Cart>(`/cart/items/${cartItemId}`, {
+    await apiFetch<Cart>(`/cart/items/${seg(cartItemId)}`, {
       method: "DELETE",
       auth: true,
     });
@@ -384,7 +394,7 @@ export const fetchFavoriteId = async (productId: string) => {
 
 export const toggleFavAction = async (prevState: { productId: string }) => {
   try {
-    await apiFetch<{ favorited: boolean }>(`/favorites/toggle/${prevState.productId}`, {
+    await apiFetch<{ favorited: boolean }>(`/favorites/toggle/${seg(prevState.productId)}`, {
       method: "POST",
       auth: true,
     });
@@ -445,7 +455,7 @@ export const createReviewAction = async (prevState: any, formData: FormData) => 
 };
 
 export const fetchProductReviews = async (productId: string) =>
-  apiFetch<Review[]>(`/reviews/product/${productId}`);
+  apiFetch<Review[]>(`/reviews/product/${seg(productId)}`);
 
 export const fetchAllReviews = async () =>
   apiFetch<Review[]>("/reviews/all", { auth: true });
